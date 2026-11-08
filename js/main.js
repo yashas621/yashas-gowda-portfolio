@@ -1595,15 +1595,14 @@
   requestAnimationFrame(loop);
 })();
 
-/* =========================================
-   FREEFALL — VEEZA VEERA BACKGROUND MUSIC
-   ========================================= */
+
+
+
+/* ---------- FREEFALL BACKGROUND MUSIC WITH FALLBACK ---------- */
 
 (() => {
   'use strict';
 
-  // Make sure this file exists:
-  // assets/audio/veeza-veera.mp3
   const music = new Audio('./assets/audio/veeza-veera.mp3');
 
   music.loop = true;
@@ -1613,13 +1612,15 @@
   let started = false;
   let muted = false;
   let fadeTimer = null;
+  let usingFallback = false;
 
-  // ---------- floating music control ----------
+  /* ---------- FLOATING MUSIC BUTTON ---------- */
+
   const musicButton = document.createElement('button');
 
   musicButton.id = 'freefall-music-control';
   musicButton.type = 'button';
-  musicButton.textContent = '♫ SOUND WAITING';
+  musicButton.textContent = '♫ TAP TO PLAY';
   musicButton.setAttribute('aria-label', 'Play background music');
 
   Object.assign(musicButton.style, {
@@ -1642,7 +1643,8 @@
 
   document.body.appendChild(musicButton);
 
-  // ---------- smooth fade-in ----------
+  /* ---------- SMOOTH FADE-IN ---------- */
+
   function fadeInMusic() {
     clearInterval(fadeTimer);
 
@@ -1661,10 +1663,7 @@
 
       currentStep++;
 
-      music.volume = Math.min(
-        0.38,
-        currentStep * increment
-      );
+      music.volume = Math.min(0.38, currentStep * increment);
 
       if (currentStep >= steps) {
         music.volume = 0.38;
@@ -1674,7 +1673,8 @@
     }, duration / steps);
   }
 
-  // ---------- start music ----------
+  /* ---------- START MUSIC ---------- */
+
   function startMusic() {
     if (started) return;
 
@@ -1687,25 +1687,51 @@
         fadeInMusic();
 
         musicButton.textContent = '♫ SOUND ON';
-        musicButton.setAttribute('aria-label', 'Mute background music');
+        musicButton.setAttribute(
+          'aria-label',
+          'Mute background music'
+        );
       })
       .catch((error) => {
         started = false;
-
         musicButton.textContent = '♫ TAP TO PLAY';
 
         console.warn('Background music could not start:', error);
       });
   }
 
-  // Start music when the visitor clicks the Enter button
+  /* ---------- AUTOMATIC ROYALTY-FREE FALLBACK ---------- */
+
+  music.addEventListener('error', () => {
+    if (!usingFallback) {
+      usingFallback = true;
+
+      music.src = './assets/audio/portfolio-cinematic.mp3';
+      music.load();
+
+      started = false;
+      musicButton.textContent = '♫ TAP TO PLAY';
+
+      console.warn('Loading royalty-free cinematic music.');
+
+      return;
+    }
+
+    musicButton.textContent = '♫ AUDIO ERROR';
+
+    console.error('Both audio files could not be loaded.');
+  });
+
+  /* ---------- START WHEN VISITOR ENTERS ---------- */
+
   document.addEventListener('click', (event) => {
     if (event.target.closest('[data-enter]')) {
       startMusic();
     }
   }, true);
 
-  // ---------- music button ----------
+  /* ---------- MUSIC BUTTON CONTROLS ---------- */
+
   musicButton.addEventListener('click', () => {
     if (!started) {
       startMusic();
@@ -1725,14 +1751,23 @@
     );
   });
 
-  // ---------- audio error handling ----------
-  music.addEventListener('error', () => {
-    musicButton.textContent = '♫ AUDIO ERROR';
+  /* ---------- BUTTON HOVER EFFECT ---------- */
 
-    console.error(
-      'Could not load the Veeza Veera audio file:',
-      music.currentSrc
-    );
+  musicButton.addEventListener('mouseenter', () => {
+    musicButton.style.borderColor = 'rgba(193,206,183,.9)';
+    musicButton.style.transform = 'translateY(-3px)';
+  });
+
+  musicButton.addEventListener('mouseleave', () => {
+    musicButton.style.borderColor = 'rgba(163,184,154,.45)';
+    musicButton.style.transform = 'translateY(0)';
+  });
+
+  /* ---------- CLEANUP ---------- */
+
+  window.addEventListener('beforeunload', () => {
+    clearInterval(fadeTimer);
+    music.pause();
   });
 
 })();
